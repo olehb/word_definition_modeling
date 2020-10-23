@@ -28,7 +28,9 @@ class Embeddings:
 
 class LSTMEncoder(nn.Module):
     def __init__(self, embedding_dim, hidden_dim):
+        super().__init__()
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, bidirectional=True)
+        # self.lstm = nn.LSTM(embedding_dim, hidden_dim, dropout=0.2, bidirectional=True)
 
     def forward(self, batch):
         output, hidden = self.lstm(batch)
@@ -36,8 +38,13 @@ class LSTMEncoder(nn.Module):
         return output, hidden
 
 
-class LSTMDecoder(nn.Module):
-    def __init__(self, embedding_dim, hidden_dim, vocab_size):
-        self.lstm = nn.LSTMCell(embedding_dim+hidden_dim, hidden_dim)
+class LSTMCellDecoder(nn.Module):
+    def __init__(self, max_length, hidden_dim, vocab_size):
+        super().__init__()
+        self.max_length = max_length
+        self.lstm = nn.LSTMCell(hidden_dim, hidden_dim)
         self.vocab_proj = nn.Linear(hidden_dim, vocab_size)
+
+    def forward(self, context):
+        pass
 

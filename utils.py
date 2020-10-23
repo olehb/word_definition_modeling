@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from torch import nn
 from wdm import Embeddings
@@ -20,14 +19,6 @@ def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/') -> 
     embeddings[Embeddings.EOS_STR] = torch.ones(dim)
 
     return Embeddings(embeddings)
-
-
-def init_encoder(input_dim, hidden_dim) -> nn.Module:
-    return nn.LSTM(input_dim, hidden_dim, bidirectional=True)
-
-
-def init_decoder() -> nn.Module:
-    pass
 
 
 def init_data_loader() -> torch.utils.data.DataLoader:
