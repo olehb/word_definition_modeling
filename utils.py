@@ -16,8 +16,8 @@ def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/') -> 
             vector = torch.tensor(list(map(float, elements[1:])), dtype=torch.float32)
             embeddings[word] = vector
 
-    embeddings[Embeddings.SOS] = torch.zeros(dim)
-    embeddings[Embeddings.EOS] = torch.ones(dim)
+    embeddings[Embeddings.SOS_STR] = torch.zeros(dim)
+    embeddings[Embeddings.EOS_STR] = torch.ones(dim)
 
     return Embeddings(embeddings)
 

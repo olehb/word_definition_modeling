@@ -4,12 +4,14 @@ from torch.nn import functional as F
 
 
 class Embeddings:
-    SOS = '<s>'
-    EOS = '</s>'
+    SOS_STR = '<s>'
+    EOS_STR = '</s>'
 
     def __init__(self, embeddings):
         self.embeddings = embeddings
-        self.dim = len(embeddings[self.SOS])
+        self.dim = len(embeddings[self.SOS_STR])
+        self.SOS = embeddings[self.SOS_STR]
+        self.EOS = embeddings[self.EOS_STR]
 
     def sentence_to_tensor(self, sentence):
         result = torch.empty(size=(len(sentence), self.dim), dtype=torch.float32)
