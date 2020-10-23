@@ -22,8 +22,8 @@ def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/') -> 
     return Embeddings(embeddings)
 
 
-def init_encoder() -> nn.Module:
-    pass
+def init_encoder(input_dim, hidden_dim) -> nn.Module:
+    return nn.LSTM(input_dim, hidden_dim, bidirectional=True)
 
 
 def init_decoder() -> nn.Module:
