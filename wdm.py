@@ -44,7 +44,21 @@ class LSTMCellDecoder(nn.Module):
         self.max_length = max_length
         self.lstm = nn.LSTMCell(hidden_dim, hidden_dim)
         self.vocab_proj = nn.Linear(hidden_dim, vocab_size)
+        self.hidden_dim = hidden_dim
 
     def forward(self, context):
-        pass
+        result = []
+        hidden = torch.zeros(size=(4, 100))
+        cell = torch.zeros(size=(4, 100))
+
+        for i in range(self.max_length):
+            hidden, cell = self.lstm(context, (hidden, cell))
+
+            out = F.relu(hidden)
+            logits = self.vocab_proj(out)
+            proj = F.log_softmax(logits)
+            _, top_id = proj.topk(1)
+            result.append(top_id)
+
+        return result
 
