@@ -39,26 +39,13 @@ class LSTMEncoder(nn.Module):
 
 
 class LSTMCellDecoder(nn.Module):
-    def __init__(self, max_length, hidden_dim, vocab_size):
+    def __init__(self, dim, hidden_dim, vocab_size):
         super().__init__()
-        self.max_length = max_length
-        self.lstm = nn.LSTMCell(hidden_dim, hidden_dim)
+        self.lstm = nn.LSTM(dim, hidden_dim)
         self.vocab_proj = nn.Linear(hidden_dim, vocab_size)
         self.hidden_dim = hidden_dim
 
-    def forward(self, context):
-        result = []
-        hidden = torch.zeros(size=(4, 100))
-        cell = torch.zeros(size=(4, 100))
-
-        for i in range(self.max_length):
-            hidden, cell = self.lstm(context, (hidden, cell))
-
-            out = F.relu(hidden)
-            logits = self.vocab_proj(out)
-            proj = F.log_softmax(logits)
-            _, top_id = proj.topk(1)
-            result.append(top_id)
-
-        return result
-
+    def forward(self, input, hidden):
+        output, hidden = self.lstm(input, (hidden, torch.zeros(size=hidden.shape)))
+        # TODO: Activation function ReLU?
+        return output, hidden
