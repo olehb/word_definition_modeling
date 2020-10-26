@@ -23,7 +23,7 @@ class Embeddings:
     def sentence_to_ids(self, sentence):
         if not type(sentence) == list:
             sentence = sentence.split()
-        return torch.tensor([self.word2id[word] for word in sentence], dtype=torch.int32)
+        return torch.tensor([self.word2id[word] for word in sentence], dtype=torch.long)
 
     def __len__(self):
         return len(self.embeddings)

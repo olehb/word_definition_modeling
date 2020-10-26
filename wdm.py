@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
 from utils import squash_packed
 
 
@@ -8,10 +7,11 @@ class LSTMEncoder(nn.Module):
     def __init__(self, embedding_dim, hidden_dim):
         super().__init__()
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, bidirectional=True)
+        # TODO: Add dropout to LSTM
         # self.lstm = nn.LSTM(embedding_dim, hidden_dim, dropout=0.2, bidirectional=True)
 
     def forward(self, batch):
-        output, hidden = self.lstm(batch)
+        output, (hidden, _) = self.lstm(batch)
         # TODO: Activation function ReLU?
         return output, hidden
 
@@ -24,6 +24,7 @@ class LSTMCellDecoder(nn.Module):
         self.hidden_dim = hidden_dim
 
     def forward(self, input, hidden):
-        output, (hidden, cell) = self.lstm(input, (hidden, torch.zeros(size=hidden.shape)))
+        output, (_, _) = self.lstm(input, (hidden, torch.zeros(size=hidden.shape)))
         # TODO: Activation function ReLU?
-        return output, hidden
+        output = squash_packed(output, self.vocab_proj)
+        return output
