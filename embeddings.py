@@ -1,27 +1,27 @@
 import torch
 from collections import defaultdict
+import itertools
 
 
 class Embeddings:
     SOS_STR = '<s>'
     EOS_STR = '</s>'
+    UNK_STR = '<unk>'
 
     def __init__(self, embeddings, word2id, id2word):
         self.embeddings = embeddings
         self.dim = len(embeddings[self.SOS_STR])
         self.SOS = embeddings[self.SOS_STR]
         self.EOS = embeddings[self.EOS_STR]
+        self.UNK = embeddings[self.UNK_STR]
         self.word2id = word2id
         self.id2word = id2word
 
     def sentence_to_tensor(self, sentence):
-        result = torch.empty(size=(len(sentence), self.dim), dtype=torch.float32)
-        for i, word in enumerate(sentence):
-            result[i] = self.embeddings[word]
-        return result
+        return torch.cat([self[word] for word in sentence], dim=0)
 
     def sentence_to_ids(self, sentence):
-        if not type(sentence) == list:
+        if type(sentence) not in (list, itertools.chain):
             sentence = sentence.split()
         return torch.tensor([self.word2id[word] for word in sentence], dtype=torch.long)
 
@@ -29,7 +29,10 @@ class Embeddings:
         return len(self.embeddings)
 
     def __getitem__(self, item):
-        return self.embeddings[item]
+        try:
+            return self.embeddings[item]
+        except KeyError:
+            return self.UNK
 
 
 def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/') -> dict:
@@ -38,10 +41,12 @@ def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/') -> 
     embeddings = dict()
     embeddings[Embeddings.SOS_STR] = torch.zeros(dim)
     embeddings[Embeddings.EOS_STR] = torch.ones(dim)
+    embeddings[Embeddings.UNK_STR] = -torch.ones(dim)
 
     word2id = defaultdict(lambda: len(word2id))
     word2id[Embeddings.SOS_STR] = 0
     word2id[Embeddings.EOS_STR] = 1
+    word2id[Embeddings.UNK_STR] = -1
 
     id2word = {v: k for v, k in word2id.items()}
 
