@@ -18,7 +18,9 @@ class Embeddings:
         self.id2word = id2word
 
     def sentence_to_tensor(self, sentence):
-        return torch.cat([self[word] for word in sentence], dim=0)
+        return torch.stack([self[word] for word in sentence])
+        # return torch.cat([self[word] for word in sentence]).view(-1, 50)
+        # return torch.cat([self[word] for word in sentence]).reshape(-1, 50)
 
     def sentence_to_ids(self, sentence):
         if type(sentence) not in (list, itertools.chain):
