@@ -8,7 +8,7 @@ class Embeddings:
     EOS_STR = '</s>'
     UNK_STR = '<unk>'
 
-    def __init__(self, embeddings, word2id, id2word):
+    def __init__(self, embeddings, word2id, id2word, device):
         self.embeddings = embeddings
         self.dim = len(embeddings[self.SOS_STR])
         self.SOS = embeddings[self.SOS_STR]
@@ -16,6 +16,7 @@ class Embeddings:
         self.UNK = embeddings[self.UNK_STR]
         self.word2id = word2id
         self.id2word = id2word
+        self.device = device
 
     def sentence_to_tensor(self, sentence):
         return torch.stack([self[word] for word in sentence])
@@ -27,7 +28,8 @@ class Embeddings:
             sentence = sentence.split()
         return torch.tensor([self.word2id[word] if word in self.word2id else self.word2id[self.UNK_STR]
                              for word in sentence],
-                            dtype=torch.long)
+                            dtype=torch.long,
+                            device=self.device)
 
     def __len__(self):
         return len(self.embeddings)
@@ -39,13 +41,13 @@ class Embeddings:
             return self.UNK
 
 
-def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/') -> dict:
+def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/', device=None) -> dict:
     assert dim in [50, 100, 200, 300]
 
     embeddings = dict()
-    embeddings[Embeddings.SOS_STR] = torch.zeros(dim)
-    embeddings[Embeddings.EOS_STR] = torch.ones(dim)
-    embeddings[Embeddings.UNK_STR] = -torch.ones(dim)
+    embeddings[Embeddings.SOS_STR] = torch.zeros(dim, device=device)
+    embeddings[Embeddings.EOS_STR] = torch.ones(dim, device=device)
+    embeddings[Embeddings.UNK_STR] = -torch.ones(dim, device=device)
 
     word2id = dict()
     word2id[Embeddings.SOS_STR] = 0
@@ -59,9 +61,9 @@ def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/') -> 
             elements = line.split(' ')
             assert len(elements) == dim+1
             word = elements[0]
-            vector = torch.tensor(list(map(float, elements[1:])), dtype=torch.float32)
+            vector = torch.tensor(list(map(float, elements[1:])), dtype=torch.float32, device=device)
             embeddings[word] = vector
             word2id[word] = len(word2id)
             id2word[word2id[word]] = word  # Magic
 
-    return Embeddings(embeddings, word2id, id2word)
+    return Embeddings(embeddings, word2id, id2word, device)
