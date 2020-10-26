@@ -25,7 +25,9 @@ class Embeddings:
     def sentence_to_ids(self, sentence):
         if type(sentence) not in (list, itertools.chain):
             sentence = sentence.split()
-        return torch.tensor([self.word2id[word] for word in sentence], dtype=torch.long)
+        return torch.tensor([self.word2id[word] if word in self.word2id else self.word2id[self.UNK_STR]
+                             for word in sentence],
+                            dtype=torch.long)
 
     def __len__(self):
         return len(self.embeddings)
@@ -45,12 +47,12 @@ def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/') -> 
     embeddings[Embeddings.EOS_STR] = torch.ones(dim)
     embeddings[Embeddings.UNK_STR] = -torch.ones(dim)
 
-    word2id = defaultdict(lambda: len(word2id))
+    word2id = dict()
     word2id[Embeddings.SOS_STR] = 0
     word2id[Embeddings.EOS_STR] = 1
-    word2id[Embeddings.UNK_STR] = -1
+    word2id[Embeddings.UNK_STR] = 2
 
-    id2word = {v: k for v, k in word2id.items()}
+    id2word = {v: k for k, v in word2id.items()}
 
     with open(f'{data_loc}/glove.6B.{dim}d.txt') as f:
         for line in f:
@@ -59,6 +61,7 @@ def load_glove_embeddings(dim: int = 50, data_loc: str = './data/glove.6B/') -> 
             word = elements[0]
             vector = torch.tensor(list(map(float, elements[1:])), dtype=torch.float32)
             embeddings[word] = vector
+            word2id[word] = len(word2id)
             id2word[word2id[word]] = word  # Magic
 
     return Embeddings(embeddings, word2id, id2word)
