@@ -17,14 +17,15 @@ class LSTMEncoder(nn.Module):
 
 
 class LSTMCellDecoder(nn.Module):
-    def __init__(self, dim, hidden_dim, vocab_size):
+    def __init__(self, dim, hidden_dim, vocab_size, device):
         super().__init__()
         self.lstm = nn.LSTM(dim, hidden_dim)
         self.vocab_proj = nn.Linear(hidden_dim, vocab_size)
         self.hidden_dim = hidden_dim
+        self.device = device
 
     def forward(self, input, hidden):
-        output, (_, _) = self.lstm(input, (hidden, torch.zeros(size=hidden.shape)))
+        output, (_, _) = self.lstm(input, (hidden, torch.zeros(size=hidden.shape).to(self.device)))
         # TODO: Activation function ReLU?
         output = squash_packed(output, self.vocab_proj)
         return output
