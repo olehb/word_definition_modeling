@@ -1,0 +1,7 @@
+numpy>=1.18.5
+tqdm>=4.41.0
+nbconvert>=6.0.7
+sagemaker-training==3.6.2
+sagemaker==2.15.3
+awscli==1.18.158
+
