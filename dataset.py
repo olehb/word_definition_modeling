@@ -19,8 +19,8 @@ class Oxford2019Dataset(Dataset):
                 #     print(f'"{word}" not in "{example}"')
                 self.items.append((word, ' '.join([word, example]), definition, example))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.items)
 
-    def __getitem__(self, idx: int) -> Tuple[str, str, str]:
+    def __getitem__(self, idx: int) -> Tuple[str, str, str, str]:
         return self.items[idx]
