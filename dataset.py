@@ -17,7 +17,7 @@ class Oxford2019Dataset(Dataset):
                 # if word not in example:
                 #     errors += 1
                 #     print(f'"{word}" not in "{example}"')
-                self.items.append((word, definition, example))
+                self.items.append((word, ' '.join([word, example]), definition, example))
 
     def __len__(self):
         return len(self.items)
