@@ -6,7 +6,8 @@ from loguru import logger
 from torch import nn
 from torch.distributed import Backend
 from torch.nn.parallel.distributed import DistributedDataParallel
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data.dataset import Dataset
 from tqdm import tqdm
 from transformers import AdamW
 from transformers import (EncoderDecoderModel,
@@ -28,10 +29,9 @@ BOS_TOKEN_ID = 101
 EOS_TOKEN_ID = 102
 
 
-def make_data_loader(filename: str, file_loc: str = os.path.join(data_loc, 'Oxford-2019')) -> DataLoader:
+def make_dataset(filename: str, file_loc: str = os.path.join(data_loc, 'Oxford-2019')) -> Dataset:
     dataset = Oxford2019Dataset(data_loc=os.path.join(file_loc, filename))
-    data_loader = DataLoader(dataset, batch_size=batch, shuffle=True, pin_memory=True)
-    return data_loader
+    return dataset
 
 
 def create_model(model_checkpoint_name):
@@ -53,6 +53,19 @@ def create_model(model_checkpoint_name):
 
     return model
 
+
+def dataset_to_dataloader(dataset, rank, batch, num_replicas):
+    sampler = DistributedSampler(dataset,
+                                 num_replicas = num_replicas,
+                                 rank = rank,
+                                 shuffle=True,
+                                 seed=42)
+    data_loader = DataLoader(dataset,
+                             batch_size=batch,
+                             shuffle=False,
+                             num_workers=0,
+                             sampler=sampler)
+    return data_loader
 
 def run(model: nn.Module,
         data_loader: DataLoader,
@@ -111,6 +124,9 @@ def train(epochs: int,
         
     for i in range(epochs):
         model.train()
+        train_data_loader.sampler.set_epoch(i)
+        valid_data_loader.sampler.set_epoch(i)
+
         train_loss = run(model, train_data_loader, tokenizer, device, update_weights)
 
         if valid_data_loader is not None:
@@ -131,6 +147,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     rank = args.local_rank
+    world_size = torch.cuda.device_count()
 
     log_name = f'log_{rank}.txt'
     logger.add(log_name)
@@ -139,10 +156,11 @@ if __name__ == '__main__':
         torch.cuda.set_device(rank)
         torch.distributed.init_process_group(backend=Backend.NCCL, init_method='env://')
 
-        train_set = make_data_loader('train.txt')
-        valid_set = make_data_loader('valid.txt')
-#         test_set = make_data_loader('test.txt')
-#         tiny_set = make_data_loader('tiny.txt')
+        train_set = dataset_to_dataloader(make_dataset('train.txt'), rank, batch, world_size)
+        valid_set = dataset_to_dataloader(make_dataset('valid.txt'), rank, batch, world_size)
+
+        test_set = dataset_to_dataloader(make_dataset('test.txt'), rank, batch, world_size)
+        tiny_set = dataset_to_dataloader(make_dataset('tiny.txt'), rank, batch, world_size)
 
         model = train(epochs=epochs, train_data_loader=train_set, valid_data_loader=valid_set, rank=rank)
 
