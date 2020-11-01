@@ -20,8 +20,8 @@ from dataset import Oxford2019Dataset
 
 model_type = os.environ.get('SM_HP_MODEL_TYPE', 'bert-base-uncased')
 data_loc = os.environ.get('SM_HP_DATA_LOC', '../data')
-epochs = int(os.environ.get('SM_HP_EPOCHS', 10))
-batch = int(os.environ.get('SM_HP_BATCH', 24))
+epochs = int(os.environ.get('SM_HP_EPOCHS', 2))
+batch = int(os.environ.get('SM_HP_BATCH', 48))
 lr = float(os.environ.get('SM_HP_LR', 1e-5))
 is_sagemaker_estimator = 'TRAINING_JOB_NAME' in os.environ  # This code is running on the remote SageMaker estimator machine
 
@@ -44,10 +44,10 @@ def create_model(model_checkpoint_name):
                                                     is_decoder=True,
                                                     bos_token_id=BOS_TOKEN_ID,
                                                     eos_token_id=EOS_TOKEN_ID)
-    encoder.requires_grad_(False)
-    decoder.bert.embeddings.requires_grad_(False)
     decoder.bert.encoder.requires_grad_(True)
     decoder.lm_head.requires_grad_(True)
+    encoder.requires_grad_(False)
+    decoder.bert.embeddings.requires_grad_(False)
 
     model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
 
