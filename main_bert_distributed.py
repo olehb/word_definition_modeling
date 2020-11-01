@@ -38,9 +38,10 @@ def make_data_loader(filename: str, file_loc: str = os.path.join(data_loc, 'Oxfo
 def run(model: nn.Module,
         data_loader: DataLoader,
         tokenizer: BertTokenizer,
-        post_hook: Callable = lambda i, b: ''):
+        device,
+        post_hook: Callable = lambda bi, di, b: ''):
     loss = 0
-    for i, (words, examples, defs, _) in enumerate(tqdm(data_loader, disable=is_sagemaker_estimator)):
+    for i, (words, examples, defs, _) in enumerate(tqdm(data_loader, disable=True)):
         input_ids = tokenizer(examples,
                               add_special_tokens=False,
                               padding=True,
@@ -51,8 +52,8 @@ def run(model: nn.Module,
                                truncation=True,
                                return_tensors="pt").input_ids
 
-        input_ids = input_ids
-        output_ids = output_ids
+        input_ids = input_ids.to(device)
+        output_ids = output_ids.to(device)
 
         outputs = model(input_ids=input_ids,
                         decoder_input_ids=output_ids,
@@ -61,7 +62,7 @@ def run(model: nn.Module,
         batch_loss = outputs.loss.sum()
         loss += batch_loss.item()
 
-        post_hook(i, batch_loss)
+        post_hook(i, device.index, batch_loss)
     return loss
 
 
@@ -70,6 +71,7 @@ def train(epochs: int,
           valid_data_loader: DataLoader = None,
           model: nn.Module = None,
           rank = None):
+    device = torch.device(f'cuda:{rank}')
     if model is None:
         encoder = BertGenerationEncoder.from_pretrained(model_type,
                                                         bos_token_id=BOS_TOKEN_ID,
@@ -80,29 +82,29 @@ def train(epochs: int,
                                                         is_decoder=True,
                                                         bos_token_id=BOS_TOKEN_ID,
                                                         eos_token_id=EOS_TOKEN_ID)
-        model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
+        model = EncoderDecoderModel(encoder=encoder, decoder=decoder).to(device)
         model = DistributedDataParallel(model, device_ids=[rank], output_device=rank)
 
     optimizer = AdamW(model.parameters(), lr=lr)
 
     tokenizer = BertTokenizer.from_pretrained(model_type)
 
-    def update_weights(bi, batch_loss):
+    def update_weights(bi, di, batch_loss):
         batch_loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
         if bi % 10 == 0:
-            logger.info(f'batch_error={batch_loss.item()};')
+            logger.info(f'rank={di}; batch_error={batch_loss.item()};')
 
     for i in range(epochs):
         model.train()
-        train_loss = run(model, train_data_loader, tokenizer, update_weights)
+        train_loss = run(model, train_data_loader, tokenizer, device, update_weights)
 
         if valid_data_loader is not None:
             with torch.no_grad():
                 model.eval()
-                val_loss = run(model, valid_data_loader, tokenizer)
+                val_loss = run(model, valid_data_loader, tokenizer, device)
         else:
             val_loss = 'N/A'
 
@@ -122,7 +124,6 @@ def save_model(model: PreTrainedModel):
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--local_rank", type=int)
     args = parser.parse_args()
@@ -131,15 +132,18 @@ if __name__ == '__main__':
 
     # TODO: Copy all log files to the output
     logger.add(f'log_{rank}.txt')
+    
+    try:
+        torch.cuda.set_device(rank)
+        torch.distributed.init_process_group(backend=Backend.NCCL, init_method='env://')
 
-    torch.cuda.set_device(rank)
-    torch.distributed.init_process_group(backend=Backend.NCCL, init_method='env://')
+        train_set = make_data_loader('train.txt')
+        test_set = make_data_loader('test.txt')
+        valid_set = make_data_loader('valid.txt')
 
-    train_set = make_data_loader('train.txt')
-    test_set = make_data_loader('test.txt')
-    valid_set = make_data_loader('valid.txt')
+        model = train(epochs=epochs, train_data_loader=test_set, valid_data_loader=valid_set, rank=rank)
 
-    model = train(epochs=epochs, train_data_loader=test_set, valid_data_loader=valid_set, rank=rank)
-
-    if rank == 0:
-        save_model(model)
+        if rank == 0:
+            save_model(model)
+    except:
+        logger.exception("training failed")
