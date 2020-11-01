@@ -53,8 +53,8 @@ def run(model: nn.Module,
                                truncation=True,
                                return_tensors="pt").input_ids
 
-        input_ids = input_ids.to(device)
-        output_ids = output_ids.to(device)
+        input_ids = input_ids.to(device, non_blocking=True)
+        output_ids = output_ids.to(device, non_blocking=True)
 
         outputs = model(input_ids=input_ids,
                         decoder_input_ids=output_ids,
@@ -111,13 +111,13 @@ def train(epochs: int,
         if valid_data_loader is not None:
             with torch.no_grad():
                 model.eval()
-                val_loss = run(model, valid_data_loader, tokenizer, device)
+                val_loss = run(model, valid_data_loader, tokenizer, device, valid_loss_progress_log)
         else:
             val_loss = 'N/A'
 
         logger.info(f'epoch={i}; device={rank}; train_error={train_loss};  valid_error={val_loss};')
 
-    return model
+    return model.module
 
 
 if __name__ == '__main__':
@@ -138,15 +138,18 @@ if __name__ == '__main__':
         train_set = make_data_loader('train.txt')
         test_set = make_data_loader('test.txt')
         valid_set = make_data_loader('valid.txt')
+        tiny_set = make_data_loader('tiny.txt')
 
-        model = train(epochs=epochs, train_data_loader=test_set, valid_data_loader=valid_set, rank=rank)
+        model = train(epochs=epochs, train_data_loader=tiny_set, valid_data_loader=tiny_set, rank=rank)
 
-        out_loc = '/opt/ml/model'
+#         out_loc = '/opt/ml/model'
+        out_loc = '/home/ec2-user/model'
+
         os.makedirs(out_loc, exist_ok=True)
         if rank == 0:
             model.save_pretrained(out_loc)
             shutil.copyfile(__file__, os.path.join(out_loc, __file__))
-        shutil.copyfile(f'log.txt', os.path.join(out_loc, 'log.txt'))
+        shutil.copyfile(log_name, os.path.join(out_loc, log_name))
     except:
         logger.exception("training failed")
         raise
