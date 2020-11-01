@@ -103,7 +103,6 @@ def train(epochs: int,
         if bi % 100 == 0:
             logger.info(f'validation: device={di}; batch={bi+1}/{num_batches}; val_batch_error={batch_loss.item()};')
         
-
     for i in range(epochs):
         model.train()
         train_loss = run(model, train_data_loader, tokenizer, device, update_weights)
