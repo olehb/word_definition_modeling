@@ -122,13 +122,13 @@ def save_model(model: PreTrainedModel):
 
 
 if __name__ == '__main__':
-    logger.add("log.txt")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--local_rank", type=int)
     args = parser.parse_args()
 
     rank = args.local_rank
+    logger.add(f'log_{rank}.txt')
 
     torch.cuda.set_device(rank)
     torch.distributed.init_process_group(backend=Backend.NCCL, init_method='env://')
