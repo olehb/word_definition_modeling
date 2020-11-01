@@ -20,7 +20,7 @@ from dataset import Oxford2019Dataset
 
 model_type = os.environ.get('SM_HP_MODEL_TYPE', 'bert-base-uncased')
 data_loc = os.environ.get('SM_HP_DATA_LOC', '../data')
-epochs = int(os.environ.get('SM_HP_EPOCHS', 1))
+epochs = int(os.environ.get('SM_HP_EPOCHS', 10))
 batch = int(os.environ.get('SM_HP_BATCH', 24))
 lr = float(os.environ.get('SM_HP_LR', 1e-5))
 is_sagemaker_estimator = 'TRAINING_JOB_NAME' in os.environ  # This code is running on the remote SageMaker estimator machine
@@ -127,7 +127,6 @@ if __name__ == '__main__':
 
     rank = args.local_rank
 
-    # TODO: Copy all log files to the output
     log_name = f'log_{rank}.txt'
     logger.add(log_name)
     
@@ -136,14 +135,14 @@ if __name__ == '__main__':
         torch.distributed.init_process_group(backend=Backend.NCCL, init_method='env://')
 
         train_set = make_data_loader('train.txt')
-        test_set = make_data_loader('test.txt')
         valid_set = make_data_loader('valid.txt')
-        tiny_set = make_data_loader('tiny.txt')
+#         test_set = make_data_loader('test.txt')
+#         tiny_set = make_data_loader('tiny.txt')
 
-        model = train(epochs=epochs, train_data_loader=tiny_set, valid_data_loader=tiny_set, rank=rank)
+        model = train(epochs=epochs, train_data_loader=train_set, valid_data_loader=valid_set, rank=rank)
 
-#         out_loc = '/opt/ml/model'
-        out_loc = '/home/ec2-user/model'
+        out_loc = '/opt/ml/model'
+#         out_loc = '/home/ec2-user/model'
 
         os.makedirs(out_loc, exist_ok=True)
         if rank == 0:
