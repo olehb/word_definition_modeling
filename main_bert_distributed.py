@@ -21,7 +21,7 @@ from dataset import Oxford2019Dataset
 model_type = os.environ.get('SM_HP_MODEL_TYPE', 'bert-base-uncased')
 data_loc = os.environ.get('SM_HP_DATA_LOC', '../data')
 epochs = int(os.environ.get('SM_HP_EPOCHS', 2))
-batch = int(os.environ.get('SM_HP_BATCH', 32))
+batch = int(os.environ.get('SM_HP_BATCH', 24))
 lr = float(os.environ.get('SM_HP_LR', 1e-5))
 is_sagemaker_estimator = 'TRAINING_JOB_NAME' in os.environ  # This code is running on the remote SageMaker estimator machine
 
@@ -94,7 +94,7 @@ def train(epochs: int,
         optimizer.step()
         optimizer.zero_grad()
 
-        if bi % 10 == 0:
+        if bi % 100 == 0:
             logger.info(f'rank={di}; batch_error={batch_loss.item()};')
 
     for i in range(epochs):
@@ -147,3 +147,4 @@ if __name__ == '__main__':
             save_model(model)
     except:
         logger.exception("training failed")
+        raise
