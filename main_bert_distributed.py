@@ -97,7 +97,12 @@ def train(epochs: int,
         optimizer.zero_grad()
 
         if bi % 100 == 0:
-            logger.info(f'device={di}; batch={bi+1}/{num_batches}; batch_error={batch_loss.item()};')
+            logger.info(f'training: device={di}; batch={bi+1}/{num_batches}; batch_error={batch_loss.item()};')
+            
+    def valid_loss_progress_log(bi, di, num_batches, batch_loss):
+        if bi % 100 == 0:
+            logger.info(f'validation: device={di}; batch={bi+1}/{num_batches}; val_batch_error={batch_loss.item()};')
+        
 
     for i in range(epochs):
         model.train()
