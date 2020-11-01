@@ -20,7 +20,7 @@ from dataset import Oxford2019Dataset
 
 model_type = os.environ.get('SM_HP_MODEL_TYPE', 'bert-base-uncased')
 data_loc = os.environ.get('SM_HP_DATA_LOC', '../data')
-epochs = int(os.environ.get('SM_HP_EPOCHS', 2))
+epochs = int(os.environ.get('SM_HP_EPOCHS', 1))
 batch = int(os.environ.get('SM_HP_BATCH', 24))
 lr = float(os.environ.get('SM_HP_LR', 1e-5))
 is_sagemaker_estimator = 'TRAINING_JOB_NAME' in os.environ  # This code is running on the remote SageMaker estimator machine
@@ -39,8 +39,9 @@ def run(model: nn.Module,
         data_loader: DataLoader,
         tokenizer: BertTokenizer,
         device,
-        post_hook: Callable = lambda bi, di, b: ''):
+        post_hook: Callable = None):
     loss = 0
+    num_batches = len(data_loader)
     for i, (words, examples, defs, _) in enumerate(tqdm(data_loader, disable=True)):
         input_ids = tokenizer(examples,
                               add_special_tokens=False,
@@ -62,7 +63,8 @@ def run(model: nn.Module,
         batch_loss = outputs.loss.sum()
         loss += batch_loss.item()
 
-        post_hook(i, device.index, batch_loss)
+        if post_hook is not None:
+            post_hook(i, device.index, num_batches, batch_loss)
     return loss
 
 
@@ -89,13 +91,13 @@ def train(epochs: int,
 
     tokenizer = BertTokenizer.from_pretrained(model_type)
 
-    def update_weights(bi, di, batch_loss):
+    def update_weights(bi, di, num_batches, batch_loss):
         batch_loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
         if bi % 100 == 0:
-            logger.info(f'rank={di}; batch_error={batch_loss.item()};')
+            logger.info(f'device={di}; batch={bi+1}/{num_batches}; batch_error={batch_loss.item()};')
 
     for i in range(epochs):
         model.train()
@@ -108,19 +110,9 @@ def train(epochs: int,
         else:
             val_loss = 'N/A'
 
-        logger.info(f'epoch={i}; train_error={train_loss};  valid_error={val_loss};')
+        logger.info(f'epoch={i}; device={rank}; train_error={train_loss};  valid_error={val_loss};')
 
     return model
-
-
-def save_model(model: PreTrainedModel):
-    out_loc = '/opt/ml/model'
-    os.makedirs(out_loc, exist_ok=True)
-
-    model.save_pretrained(out_loc)
-
-    shutil.copyfile(__file__, os.path.join(out_loc, __file__))
-    shutil.copyfile('log.txt', os.path.join(out_loc, 'log.txt'))
 
 
 if __name__ == '__main__':
@@ -131,7 +123,8 @@ if __name__ == '__main__':
     rank = args.local_rank
 
     # TODO: Copy all log files to the output
-    logger.add(f'log_{rank}.txt')
+    log_name = f'log_{rank}.txt'
+    logger.add(log_name)
     
     try:
         torch.cuda.set_device(rank)
@@ -143,8 +136,12 @@ if __name__ == '__main__':
 
         model = train(epochs=epochs, train_data_loader=test_set, valid_data_loader=valid_set, rank=rank)
 
+        out_loc = '/opt/ml/model'
+        os.makedirs(out_loc, exist_ok=True)
         if rank == 0:
-            save_model(model)
+            model.save_pretrained(out_loc)
+            shutil.copyfile(__file__, os.path.join(out_loc, __file__))
+        shutil.copyfile(f'log.txt', os.path.join(out_loc, 'log.txt'))
     except:
         logger.exception("training failed")
         raise
