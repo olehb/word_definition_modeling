@@ -1,2 +1,1 @@
- jupyter nbconvert --to script ${SM_HP_NOTEBOOK_NAME}.ipynb
- ipython ${SM_HP_NOTEBOOK_NAME}.py
+python -m torch.distributed.launch --nproc_per_node=8 main_bert_distributed.py
