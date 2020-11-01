@@ -128,6 +128,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     rank = args.local_rank
+
+    # TODO: Copy all log files to the output
     logger.add(f'log_{rank}.txt')
 
     torch.cuda.set_device(rank)
