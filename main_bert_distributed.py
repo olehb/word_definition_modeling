@@ -10,7 +10,6 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AdamW
 from transformers import (EncoderDecoderModel,
-                          PreTrainedModel,
                           BertTokenizer,
                           BertGenerationEncoder,
                           BertGenerationDecoder)
