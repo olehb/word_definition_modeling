@@ -34,6 +34,26 @@ def make_data_loader(filename: str, file_loc: str = os.path.join(data_loc, 'Oxfo
     return data_loader
 
 
+def create_model(model_checkpoint_name):
+    encoder = BertGenerationEncoder.from_pretrained(model_checkpoint_name,
+                                                    bos_token_id=BOS_TOKEN_ID,
+                                                    eos_token_id=EOS_TOKEN_ID) # add cross attention layers and use BERT’s cls token as BOS token and sep token as EOS token
+
+    decoder = BertGenerationDecoder.from_pretrained(model_checkpoint_name,
+                                                    add_cross_attention=True,
+                                                    is_decoder=True,
+                                                    bos_token_id=BOS_TOKEN_ID,
+                                                    eos_token_id=EOS_TOKEN_ID)
+    encoder.requires_grad_(False)
+    decoder.bert.embeddings.requires_grad_(False)
+    decoder.bert.encoder.requires_grad_(True)
+    decoder.lm_head.requires_grad_(True)
+
+    model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
+
+    return model
+
+
 def run(model: nn.Module,
         data_loader: DataLoader,
         tokenizer: BertTokenizer,
@@ -70,24 +90,11 @@ def run(model: nn.Module,
 def train(epochs: int,
           train_data_loader: DataLoader,
           valid_data_loader: DataLoader = None,
-          model: nn.Module = None,
           rank = None):
     device = torch.device(f'cuda:{rank}')
-    if model is None:
-        encoder = BertGenerationEncoder.from_pretrained(model_type,
-                                                        bos_token_id=BOS_TOKEN_ID,
-                                                        eos_token_id=EOS_TOKEN_ID)  # add cross attention layers and use BERT’s cls token as BOS token and sep token as EOS token
-
-        decoder = BertGenerationDecoder.from_pretrained(model_type,
-                                                        add_cross_attention=True,
-                                                        is_decoder=True,
-                                                        bos_token_id=BOS_TOKEN_ID,
-                                                        eos_token_id=EOS_TOKEN_ID)
-        model = EncoderDecoderModel(encoder=encoder, decoder=decoder).to(device)
-        model = DistributedDataParallel(model, device_ids=[rank], output_device=rank)
-
+    model = create_model(model_type).to(device)
+    model = DistributedDataParallel(model, device_ids=[rank], output_device=rank)
     optimizer = AdamW(model.parameters(), lr=lr)
-
     tokenizer = BertTokenizer.from_pretrained(model_type)
 
     def update_weights(bi, di, num_batches, batch_loss):
