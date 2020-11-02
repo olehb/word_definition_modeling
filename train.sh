@@ -1,2 +1,1 @@
- jupyter nbconvert --to script main.ipynb
- ipython main.py
+python -m torch.distributed.launch --nproc_per_node=8 main_bert_distributed.py

@@ -4,4 +4,5 @@ nbconvert>=6.0.7
 sagemaker-training==3.6.2
 sagemaker==2.15.3
 awscli==1.18.158
-
+transformers==3.4.0
+loguru==0.5.3

@@ -28,7 +28,10 @@ class LSTMCellDecoder(nn.Module):
         self.hidden_dim = hidden_dim
 
     def forward(self, input: PackedSequence, hidden: torch.Tensor) -> PackedSequence:
-        output, (_, _) = self.lstm(input, (hidden, torch.zeros(size=hidden.shape).to(hidden.device)))
+        output, (hidden, _) = self.lstm(input, (hidden, torch.zeros(size=hidden.shape).to(hidden.device)))
         # TODO: Activation function ReLU?
-        output = squash_packed(output, self.vocab_proj)
-        return output
+        if type(output) == PackedSequence:
+            output = squash_packed(output, self.vocab_proj)
+        else:
+            output = self.vocab_proj(output)
+        return output, hidden
