@@ -20,9 +20,10 @@ from dataset import Oxford2019Dataset
 
 model_type = os.environ.get('SM_HP_MODEL_TYPE', 'bert-base-uncased')
 data_loc = os.environ.get('SM_HP_DATA_LOC', '../data')
-epochs = int(os.environ.get('SM_HP_EPOCHS', 2))
+epochs = int(os.environ.get('SM_HP_EPOCHS', 5))
 batch = int(os.environ.get('SM_HP_BATCH', 48))
 lr = float(os.environ.get('SM_HP_LR', 1e-5))
+out_loc = os.environ.get('SM_HP_OUTPUT_DIR', '/home/ec2-user/model')
 is_sagemaker_estimator = 'TRAINING_JOB_NAME' in os.environ  # This code is running on the remote SageMaker estimator machine
 
 BOS_TOKEN_ID = 101
@@ -164,9 +165,6 @@ if __name__ == '__main__':
         # tiny_set = dataset_to_dataloader(make_dataset('tiny.txt'), rank, batch, world_size)
 
         model = train(epochs=epochs, train_data_loader=train_set, valid_data_loader=valid_set, rank=rank)
-
-        out_loc = '/opt/ml/model'
-#         out_loc = '/home/ec2-user/model'
 
         os.makedirs(out_loc, exist_ok=True)
         if rank == 0:
