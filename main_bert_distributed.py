@@ -19,11 +19,11 @@ from typing import Callable
 from dataset import Oxford2019Dataset
 
 model_type = os.environ.get('SM_HP_MODEL_TYPE', 'bert-base-uncased')
+out_loc = os.environ.get('SM_HP_OUTPUT_LOC', '/home/ec2-user/model')
 data_loc = os.environ.get('SM_HP_DATA_LOC', '../data')
 epochs = int(os.environ.get('SM_HP_EPOCHS', 5))
 batch = int(os.environ.get('SM_HP_BATCH', 48))
 lr = float(os.environ.get('SM_HP_LR', 1e-5))
-out_loc = os.environ.get('SM_HP_OUTPUT_DIR', '/home/ec2-user/model')
 is_sagemaker_estimator = 'TRAINING_JOB_NAME' in os.environ  # This code is running on the remote SageMaker estimator machine
 
 BOS_TOKEN_ID = 101
