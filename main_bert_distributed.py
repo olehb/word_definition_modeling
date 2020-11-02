@@ -64,7 +64,8 @@ def dataset_to_dataloader(dataset, rank, batch, num_replicas):
                              batch_size=batch,
                              shuffle=False,
                              num_workers=0,
-                             sampler=sampler)
+                             sampler=sampler,
+                             pin_memory=True)
     return data_loader
 
 def run(model: nn.Module,
@@ -159,8 +160,8 @@ if __name__ == '__main__':
         train_set = dataset_to_dataloader(make_dataset('train.txt'), rank, batch, world_size)
         valid_set = dataset_to_dataloader(make_dataset('valid.txt'), rank, batch, world_size)
 
-        test_set = dataset_to_dataloader(make_dataset('test.txt'), rank, batch, world_size)
-        tiny_set = dataset_to_dataloader(make_dataset('tiny.txt'), rank, batch, world_size)
+        # test_set = dataset_to_dataloader(make_dataset('test.txt'), rank, batch, world_size)
+        # tiny_set = dataset_to_dataloader(make_dataset('tiny.txt'), rank, batch, world_size)
 
         model = train(epochs=epochs, train_data_loader=train_set, valid_data_loader=valid_set, rank=rank)
 
